@@ -12,7 +12,7 @@ import dashscope
 from dashscope import Generation
 
 # 配置
-CONTROL_CENTER_URL = "http://localhost:8003"
+CONTROL_CENTER_URL = os.getenv("CONTROL_CENTER_URL", "http://localhost:8003")
 
 # 加载环境变量：使用绝对路径确保任何目录下都能正确加载
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -83,41 +83,151 @@ class RepairAgent:
         import threading
         threading.Thread(target=report, daemon=True).start()
     
-    def send_feishu_notification(self, title: str, content: str, success: bool = True):
-        """发送飞书通知"""
+    def send_feishu_notification(self, title: str, content: str, success: bool = True, pr_url: str = ""):
+        """发送飞书结构化卡片通知，支持重试，不影响主流程"""
         if not FEISHU_WEBHOOK_URL:
             self.log_thought("飞书通知", "未配置飞书WebHook，跳过通知")
             return
         
-        try:
-            status_emoji = "✅" if success else "❌"
-            message = {
-                "msg_type": "text",
-                "content": {
-                    "text": f"{FEISHU_KEYWORD}\n{status_emoji} {title}\n\n{content}"
+        max_retries = 2
+        for retry in range(max_retries + 1):
+            try:
+                status_text = "修复成功" if success else "修复失败"
+                status_color = "green" if success else "red"
+                status_emoji = "✅" if success else "❌"
+                
+                # 飞书卡片模板
+                message = {
+                    "msg_type": "interactive",
+                    "card": {
+                        "config": {"wide_screen_mode": True},
+                        "elements": [
+                            {
+                                "tag": "div",
+                                "text": {
+                                    "tag": "lark_md",
+                                    "content": f"## {status_emoji} 服务自动修复{status_text}\n\n{content}"
+                                }
+                            },
+                            {
+                                "tag": "hr"
+                            },
+                            {
+                                "tag": "div",
+                                "text": {
+                                    "tag": "lark_md",
+                                    "content": f"**🕐 修复时间**: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n**🎯 修复状态**: <font color='{status_color}'>{status_text}</font>"
+                                }
+                            }
+                        ]
+                    }
                 }
-            }
-            response = requests.post(FEISHU_WEBHOOK_URL, json=message, timeout=3)
-            if response.status_code == 200:
-                self.log_thought("飞书通知", "通知发送成功")
-            else:
-                self.log_thought("飞书通知", f"通知发送失败，状态码: {response.status_code}")
-        except Exception as e:
-            self.log_thought("飞书通知", f"通知发送异常: {str(e)}")
+                
+                # 如果有PR链接，添加操作按钮
+                if pr_url and pr_url.startswith("http"):
+                    message["card"]["elements"].append({
+                        "tag": "action",
+                        "actions": [
+                            {
+                                "tag": "button",
+                                "text": {
+                                    "tag": "plain_text",
+                                    "content": "👉 查看修复PR"
+                                },
+                                "url": pr_url,
+                                "type": "primary"
+                            }
+                        ]
+                    })
+                
+                response = requests.post(FEISHU_WEBHOOK_URL, json=message, timeout=10)
+                if response.status_code == 200:
+                    self.log_thought("飞书通知", "卡片通知发送成功")
+                    return
+                else:
+                    self.log_thought("飞书通知", f"通知发送失败，状态码: {response.status_code}, 重试次数: {retry}")
+            except Exception as e:
+                self.log_thought("飞书通知", f"通知发送异常: {str(e)}, 重试次数: {retry}")
+            
+            # 失败后等待1秒重试
+            if retry < max_retries:
+                import time
+                time.sleep(1)
+        
+        self.log_thought("飞书通知", f"通知发送最终失败，已重试{max_retries}次")
     
     def create_pull_request(self, branch_name: str, repair_desc: str) -> str:
-        """创建PR并返回PR链接"""
+        """自动创建PR（支持GitHub/GitLab/Gitee API调用）"""
         if not GIT_REPO_URL:
             self.log_thought("PR提交", "未配置Git仓库地址，跳过PR创建")
             return "未配置仓库地址"
         
         try:
-            # 构造PR链接（支持GitHub/GitLab/Gitee通用格式）
-            pr_url = f"{GIT_REPO_URL.rstrip('/')}/pull/new/{GIT_TARGET_BRANCH}...{branch_name}"
-            self.log_thought("PR提交", f"PR链接已生成: {pr_url}")
+            # 优先级1：如果配置了GIT_TOKEN，调用平台API自动创建PR
+            git_token = os.getenv("GIT_TOKEN", "")
+            pr_url = ""
+            
+            if git_token:
+                # 识别Git平台
+                if "github.com" in GIT_REPO_URL:
+                    # GitHub API
+                    repo_path = GIT_REPO_URL.rstrip('/').split("github.com/")[-1]
+                    api_url = f"https://api.github.com/repos/{repo_path}/pulls"
+                    headers = {"Authorization": f"token {git_token}"}
+                    data = {
+                        "title": f"fix: {repair_desc} [自动修复]",
+                        "head": branch_name,
+                        "base": GIT_TARGET_BRANCH,
+                        "body": f"🤖 自动修复生成PR\n\n错误类型: {repair_desc}\n修复时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "draft": False
+                    }
+                    response = requests.post(api_url, json=data, headers=headers, timeout=10)
+                    if response.status_code in [200, 201]:
+                        pr_url = response.json()["html_url"]
+                        self.log_thought("PR提交", f"GitHub PR自动创建成功: {pr_url}")
+                
+                elif "gitee.com" in GIT_REPO_URL:
+                    # Gitee API
+                    repo_path = GIT_REPO_URL.rstrip('/').split("gitee.com/")[-1]
+                    api_url = f"https://gitee.com/api/v5/repos/{repo_path}/pulls"
+                    headers = {"Authorization": f"token {git_token}"}
+                    data = {
+                        "title": f"fix: {repair_desc} [自动修复]",
+                        "head": branch_name,
+                        "base": GIT_TARGET_BRANCH,
+                        "body": f"🤖 自动修复生成PR\n\n错误类型: {repair_desc}\n修复时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "draft": False
+                    }
+                    response = requests.post(api_url, json=data, headers=headers, timeout=10)
+                    if response.status_code in [200, 201]:
+                        pr_url = response.json()["html_url"]
+                        self.log_thought("PR提交", f"Gitee PR自动创建成功: {pr_url}")
+                
+                elif "gitlab.com" in GIT_REPO_URL:
+                    # GitLab API
+                    repo_path = GIT_REPO_URL.rstrip('/').split("gitlab.com/")[-1].replace("/", "%2F")
+                    api_url = f"https://gitlab.com/api/v4/projects/{repo_path}/merge_requests"
+                    headers = {"PRIVATE-TOKEN": git_token}
+                    data = {
+                        "title": f"fix: {repair_desc} [自动修复]",
+                        "source_branch": branch_name,
+                        "target_branch": GIT_TARGET_BRANCH,
+                        "description": f"🤖 自动修复生成PR\n\n错误类型: {repair_desc}\n修复时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                        "draft": False
+                    }
+                    response = requests.post(api_url, json=data, headers=headers, timeout=10)
+                    if response.status_code in [200, 201]:
+                        pr_url = response.json()["web_url"]
+                        self.log_thought("PR提交", f"GitLab PR自动创建成功: {pr_url}")
+            
+            # 优先级2：未配置Token时生成手动PR链接
+            if not pr_url:
+                pr_url = f"{GIT_REPO_URL.rstrip('/')}/pull/new/{GIT_TARGET_BRANCH}...{branch_name}"
+                self.log_thought("PR提交", f"生成手动PR链接: {pr_url}")
+            
             return pr_url
         except Exception as e:
-            self.log_thought("PR提交", f"生成PR链接失败: {str(e)}")
+            self.log_thought("PR提交", f"创建PR失败: {str(e)}")
             return "PR生成失败"
 
     def retrieve_similar_errors(self, error_info: str) -> List[Dict[str, Any]]:
@@ -448,8 +558,8 @@ class RepairAgent:
             success = True
             
             # 发送成功通知
-            content = f"✅ 修复成功\n\n修复等级: {alarm_data.inject_info['bug_level']}\n目标文件: {file_path}\n修复耗时: {duration}秒\nPR链接: {pr_url}"
-            self.send_feishu_notification("修复成功通知", content, success=True)
+            content = f"**修复等级**: {alarm_data.inject_info['bug_level']}\n**目标文件**: {file_path}\n**修复耗时**: {duration}秒\n\n✅ 错误已自动修复，服务已恢复正常运行。"
+            self.send_feishu_notification("服务修复成功通知", content, success=True, pr_url=pr_url)
             
             return {
                 "status": "success",

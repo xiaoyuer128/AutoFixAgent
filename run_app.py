@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import signal
+import time
 from datetime import datetime
 
 process = None
@@ -68,4 +69,27 @@ def main():
     return exit_code
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # 服务崩溃自动重启机制
+    restart_count = 0
+    max_restarts = 100  # 最大重启次数
+    restart_delay = 2  # 重启间隔秒
+    
+    while restart_count < max_restarts:
+        try:
+            exit_code = main()
+            if exit_code == 0:
+                break  # 正常退出，不重启
+            print(f"服务异常退出，退出码: {exit_code}，{restart_delay}秒后自动重启...")
+            restart_count += 1
+            time.sleep(restart_delay)
+        except KeyboardInterrupt:
+            print("\n手动停止服务")
+            break
+        except Exception as e:
+            print(f"服务运行异常: {e}，{restart_delay}秒后自动重启...")
+            restart_count += 1
+            time.sleep(restart_delay)
+    
+    if restart_count >= max_restarts:
+        print(f"超过最大重启次数{max_restarts}，停止重启")
+        sys.exit(1)
