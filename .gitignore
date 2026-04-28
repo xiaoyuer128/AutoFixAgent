@@ -1,0 +1,27 @@
+# 环境配置文件
+.env
+
+# 临时备份文件
+*.bak
+
+# Python 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# IDE 配置目录
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志目录
+logs/*
+!logs/.gitkeep
+
+# RAG 向量数据库
+data/vector_db/

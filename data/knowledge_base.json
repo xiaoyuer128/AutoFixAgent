@@ -1,0 +1,74 @@
+[
+    {
+        "error_pattern": "ModuleNotFoundError: No module named 'sqlalchemy'",
+        "error_type": "导入错误",
+        "solution": "在requirements.txt中添加sqlalchemy依赖，执行pip install sqlalchemy",
+        "confidence": 0.95
+    },
+    {
+        "error_pattern": "SyntaxError: invalid syntax",
+        "error_type": "语法错误",
+        "solution": "检查错误行附近的括号、引号、冒号是否完整，修复语法符号缺失",
+        "confidence": 0.9
+    },
+    {
+        "error_pattern": "SyntaxError: unmatched '}'",
+        "error_type": "语法错误",
+        "solution": "检查大括号配对，补全缺失的左大括号或者删除多余的右大括号",
+        "confidence": 0.94
+    },
+    {
+        "error_pattern": "SyntaxError: unmatched ')'",
+        "error_type": "语法错误",
+        "solution": "检查小括号配对，补全缺失的左小括号或者删除多余的右小括号",
+        "confidence": 0.93
+    },
+    {
+        "error_pattern": "SyntaxError: EOL while scanning string literal",
+        "error_type": "语法错误",
+        "solution": "检查字符串引号是否闭合，补全缺失的引号",
+        "confidence": 0.91
+    },
+    {
+        "error_pattern": "IndentationError: unexpected indent",
+        "error_type": "缩进错误",
+        "solution": "统一使用4空格缩进，检查缩进是否对齐",
+        "confidence": 0.92
+    },
+    {
+        "error_pattern": "IndentationError: unindent does not match any outer indentation level",
+        "error_type": "缩进错误",
+        "solution": "统一使用4空格缩进，修复缩进不一致问题",
+        "confidence": 0.92
+    },
+    {
+        "error_pattern": "TypeError: unhashable type: 'dict'",
+        "error_type": "类型错误",
+        "solution": "检查字典key是否为不可变类型，避免使用dict作为key，序列化ORM对象为标准JSON",
+        "confidence": 0.88
+    },
+    {
+        "error_pattern": "NameError: name '.*' is not defined",
+        "error_type": "名称错误",
+        "solution": "检查变量/函数是否定义，添加缺失的导入语句或变量声明",
+        "confidence": 0.85
+    },
+    {
+        "error_pattern": "AttributeError: '.*' object has no attribute '.*'",
+        "error_type": "属性错误",
+        "solution": "检查对象是否包含对应属性，修复属性名拼写错误或添加缺失的属性",
+        "confidence": 0.87
+    },
+    {
+        "error_pattern": "UnicodeDecodeError: 'utf-8' codec can't decode",
+        "error_type": "编码错误",
+        "solution": "修改文件读取编码为gbk，添加errors='ignore'忽略乱码字符",
+        "confidence": 0.93
+    },
+    {
+        "error_pattern": "KeyError: '.*'",
+        "error_type": "键错误",
+        "solution": "检查字典是否包含指定key，使用get方法获取值并设置默认值",
+        "confidence": 0.89
+    }
+]

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>红蓝对抗总指挥部</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyber-blue': '#00f0ff',
+                        'cyber-purple': '#9d00ff',
+                        'cyber-red': '#ff0055',
+                        'cyber-green': '#00ff88',
+                        'cyber-dark': '#0a0e17',
+                        'cyber-darker': '#050709',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { textShadow: '0 0 5px currentColor, 0 0 10px currentColor' },
+                            '100%': { textShadow: '0 0 10px currentColor, 0 0 20px currentColor' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow-glow {
+                text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+            }
+            .border-glow {
+                box-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+            }
+            .scrollbar-hidden::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hidden {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-cyber-dark text-gray-100 min-h-screen font-mono">
+    <!-- 顶部状态栏 -->
+    <header class="bg-cyber-darker border-b border-cyber-blue/30 px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold text-cyber-blue animate-glow">红蓝对抗总指挥部</h1>
+            <span id="repairStatus" class="hidden px-3 py-1 bg-cyber-red/20 border border-cyber-red/50 rounded text-cyber-red animate-pulse">🔴 修复进行中</span>
+        </div>
+        <div class="flex gap-6">
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Target App:</span>
+                <span id="statusTarget" class="w-3 h-3 rounded-full bg-gray-500"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Red Agent:</span>
+                <span id="statusRed" class="w-3 h-3 rounded-full bg-gray-500"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Blue Agent:</span>
+                <span id="statusBlue" class="w-3 h-3 rounded-full bg-gray-500"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-400">Dashboard:</span>
+                <span class="w-3 h-3 rounded-full bg-cyber-green animate-pulse"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左侧：思维流窗口 -->
+            <div class="lg:col-span-2">
+                <div class="bg-cyber-darker border border-cyber-blue/30 rounded-lg overflow-hidden h-[600px] flex flex-col">
+                    <div class="px-4 py-3 border-b border-cyber-blue/30 flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-cyber-blue text-shadow-glow">🤖 Agent 思维流 (CoT)</h2>
+                        <button onclick="clearLogs()" class="text-xs px-2 py-1 border border-gray-600 rounded hover:bg-gray-800">清空日志</button>
+                    </div>
+                    <div id="cotLogs" class="flex-1 p-4 overflow-y-auto scrollbar-hidden space-y-2 font-mono text-sm">
+                        <div class="text-gray-500 text-center py-8">等待系统事件...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：控制区 -->
+            <div class="space-y-6">
+                <!-- 红队控制区 -->
+                <div class="bg-cyber-darker border border-cyber-red/30 rounded-lg p-4">
+                    <h2 class="text-lg font-semibold text-cyber-red mb-4 text-shadow-glow">🔴 红队攻击区</h2>
+                    <div class="space-y-3">
+                        <button id="btnLevel1" onclick="injectBug(1)" class="w-full py-3 bg-gradient-to-r from-cyber-red/80 to-red-600/80 hover:from-cyber-red hover:to-red-600 rounded-lg font-bold border border-cyber-red/50 border-glow transition-all">
+                            Level 1 <br><span class="text-xs">语法错误注入</span>
+                        </button>
+                        <button id="btnLevel2" onclick="injectBug(2)" class="w-full py-3 bg-gradient-to-r from-orange-500/80 to-red-500/80 hover:from-orange-500 hover:to-red-500 rounded-lg font-bold border border-orange-500/50 border-glow transition-all">
+                            Level 2 <br><span class="text-xs">逻辑篡改注入</span>
+                        </button>
+                        <button id="btnLevel3" onclick="injectBug(3)" class="w-full py-3 bg-gradient-to-r from-purple-600/80 to-cyber-red/80 hover:from-purple-600 hover:to-cyber-red rounded-lg font-bold border border-purple-500/50 border-glow transition-all">
+                            Level 3 <br><span class="text-xs">性能阻塞注入</span>
+                        </button>
+                        <button id="btnRepair" onclick="startRepair()" class="w-full py-3 bg-gradient-to-r from-cyber-blue/80 to-cyber-purple/80 hover:from-cyber-blue hover:to-cyber-purple rounded-lg font-bold border border-cyber-blue/50 border-glow transition-all mt-4">
+                            🔵 启动蓝队修复
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 知识库概览 -->
+                <div class="bg-cyber-darker border border-cyber-green/30 rounded-lg p-4">
+                    <h2 class="text-lg font-semibold text-cyber-green mb-3 text-shadow-glow">📚 知识库概览</h2>
+                    <div class="text-center py-4">
+                        <div id="knowledgeCount" class="text-5xl font-bold text-cyber-green animate-glow">0</div>
+                        <div class="text-sm text-gray-400 mt-2">条已收录修复经验</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部：代码对比区 -->
+        <div id="diffSection" class="mt-6 bg-cyber-darker border border-cyber-purple/30 rounded-lg overflow-hidden hidden">
+            <div class="px-4 py-3 border-b border-cyber-purple/30 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-cyber-purple text-shadow-glow">🔍 修复代码对比</h2>
+                <button id="btnMerge" onclick="mergeRepair()" class="px-4 py-2 bg-cyber-green hover:bg-cyber-green/80 text-black font-bold rounded transition-all">
+                    ✅ Approve & Merge
+                </button>
+            </div>
+            <div class="grid grid-cols-2 divide-x divide-cyber-purple/30 h-[400px]">
+                <div class="p-4 overflow-y-auto scrollbar-hidden">
+                    <div class="text-cyber-red font-bold mb-2">修复前</div>
+                    <pre id="diffBefore" class="text-sm whitespace-pre-wrap text-gray-300"></pre>
+                </div>
+                <div class="p-4 overflow-y-auto scrollbar-hidden">
+                    <div class="text-cyber-green font-bold mb-2">修复后</div>
+                    <pre id="diffAfter" class="text-sm whitespace-pre-wrap text-gray-300"></pre>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let ws;
+        let isRepairing = false;
+        const baseUrl = window.location.origin;
+
+        // 初始化WebSocket连接
+        function initWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'cot_log') {
+                    addLog(data);
+                } else if (data.type === 'system_status') {
+                    updateSystemStatus(data.is_repairing);
+                } else if (data.type === 'diff_update') {
+                    updateDiff(data.diff);
+                }
+            };
+
+            ws.onclose = () => {
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        // 添加日志
+        function addLog(log) {
+            const logsContainer = document.getElementById('cotLogs');
+            if (logsContainer.querySelector('.text-gray-500')) {
+                logsContainer.innerHTML = '';
+            }
+            
+            const logElement = document.createElement('div');
+            logElement.className = 'p-2 rounded bg-cyber-dark/80 border-l-2';
+            
+            let colorClass = 'border-gray-500 text-gray-300';
+            if (log.step.includes('RAG检索')) colorClass = 'border-cyber-blue text-cyber-blue';
+            if (log.step.includes('大模型修复')) colorClass = 'border-cyber-purple text-cyber-purple';
+            if (log.step.includes('修复应用') || log.step.includes('修复完成')) colorClass = 'border-cyber-green text-cyber-green';
+            if (log.step.includes('错误') || log.step.includes('失败')) colorClass = 'border-cyber-red text-cyber-red';
+            
+            logElement.className += ` ${colorClass}`;
+            logElement.innerHTML = `
+                <span class="text-xs text-gray-500">[${log.timestamp}]</span>
+                <strong>[${log.step}]</strong> ${log.message}
+            `;
+            logsContainer.appendChild(logElement);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('cotLogs').innerHTML = '<div class="text-gray-500 text-center py-8">等待系统事件...</div>';
+        }
+
+        // 更新系统状态
+        function updateSystemStatus(repairing) {
+            isRepairing = repairing;
+            const repairStatus = document.getElementById('repairStatus');
+            const buttons = ['btnLevel1', 'btnLevel2', 'btnLevel3', 'btnRepair'];
+            
+            if (repairing) {
+                repairStatus.classList.remove('hidden');
+                buttons.forEach(id => {
+                    document.getElementById(id).disabled = true;
+                    document.getElementById(id).classList.add('opacity-50', 'cursor-not-allowed');
+                });
+            } else {
+                repairStatus.classList.add('hidden');
+                buttons.forEach(id => {
+                    document.getElementById(id).disabled = false;
+                    document.getElementById(id).classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+            }
+        }
+
+        // 更新Diff
+        function updateDiff(diff) {
+            const diffSection = document.getElementById('diffSection');
+            if (diff.show) {
+                diffSection.classList.remove('hidden');
+                document.getElementById('diffBefore').textContent = diff.before;
+                document.getElementById('diffAfter').textContent = diff.after;
+            } else {
+                diffSection.classList.add('hidden');
+            }
+        }
+
+        // 注入Bug
+        async function injectBug(level) {
+            if (isRepairing) return;
+            const btn = document.getElementById(`btnLevel${level}`);
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '注入中...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/red/inject/${level}`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+            } catch (e) {
+                alert('注入失败: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // 启动修复
+        async function startRepair() {
+            if (isRepairing) return;
+            const btn = document.getElementById('btnRepair');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '修复中...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/blue/repair`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+            } catch (e) {
+                alert('启动修复失败: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // 合并修复
+        async function mergeRepair() {
+            try {
+                await fetch(`${baseUrl}/api/blue/merge`, { method: 'POST' });
+                document.getElementById('diffSection').classList.add('hidden');
+                alert('修复已合并到主分支');
+            } catch (e) {
+                alert('合并失败: ' + e.message);
+            }
+        }
+
+        // 检查服务状态
+        async function checkServiceStatus() {
+            try {
+                const response = await fetch(`${baseUrl}/api/status`);
+                const result = await response.json();
+                const statuses = result.data.services;
+                
+                document.getElementById('statusTarget').className = `w-3 h-3 rounded-full ${statuses.target ? 'bg-cyber-green animate-pulse' : 'bg-cyber-red'}`;
+                document.getElementById('statusRed').className = `w-3 h-3 rounded-full ${statuses.red ? 'bg-cyber-green animate-pulse' : 'bg-cyber-red'}`;
+                document.getElementById('statusBlue').className = `w-3 h-3 rounded-full ${statuses.blue ? 'bg-cyber-green animate-pulse' : 'bg-cyber-red'}`;
+                document.getElementById('knowledgeCount').textContent = result.data.knowledge_count;
+                updateSystemStatus(result.data.is_repairing);
+            } catch (e) {}
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebSocket();
+            checkServiceStatus();
+            setInterval(checkServiceStatus, 5000);
+        });
+    </script>
+</body>
+</html>
