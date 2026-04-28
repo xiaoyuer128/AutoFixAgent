@@ -179,9 +179,35 @@ async def red_inject(level: int, background_tasks: BackgroundTasks):
             return {"code": 200, "message": f"Level {level} Bug注入成功", "data": response.json()}
         raise HTTPException(status_code=response.status_code, detail=f"红队返回错误: {response.text}")
     except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=500, detail="连接红队服务失败，请确认主服务(8000端口)已启动")
+        raise HTTPException(status_code=500, detail="连接红队服务失败，请确认红队服务(8002端口)已启动")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"注入失败: {str(e)}")
+
+# 红队恢复原始文件
+@app.post("/api/red/restore")
+async def red_restore():
+    global is_repairing
+    with lock:
+        if is_repairing:
+            raise HTTPException(status_code=400, detail="修复进行中，禁止操作")
+    
+    file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "app", "main.py")
+    
+    try:
+        response = requests.post(
+            f"{RED_AGENT_URL}/api/saboteur/restore",
+            json={
+                "file_path": file_path
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            return {"code": 200, "message": "文件恢复成功", "data": response.json()}
+        raise HTTPException(status_code=response.status_code, detail=f"红队返回错误: {response.text}")
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=500, detail="连接红队服务失败，请确认红队服务(8002端口)已启动")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"恢复失败: {str(e)}")
 
 # 蓝队修复
 @app.post("/api/blue/repair")
@@ -283,6 +309,18 @@ async def merge_repair():
         "diff": latest_diff
     }))
     return {"code": 200, "message": "修复已合并到主分支"}
+
+# 获取知识库详情
+@app.get("/api/knowledge-base", summary="获取故障知识库详情")
+async def get_knowledge_base():
+    kb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "knowledge_base.json")
+    with open(kb_path, "r", encoding="utf-8") as f:
+        knowledge_base = json.load(f)
+    return {
+        "code": 200,
+        "message": "获取成功",
+        "data": knowledge_base
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=APP_PORT, reload=True)

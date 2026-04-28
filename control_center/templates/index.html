@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>红蓝对抗总指挥部</title>
+    <title>AutoFixAgent 自动化修复系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -53,7 +53,7 @@
     <!-- 顶部状态栏 -->
     <header class="bg-cyber-darker border-b border-cyber-blue/30 px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <h1 class="text-2xl font-bold text-cyber-blue animate-glow">红蓝对抗总指挥部</h1>
+            <h1 class="text-2xl font-bold text-cyber-blue animate-glow">🤖 AutoFixAgent 自动化修复系统</h1>
             <span id="repairStatus" class="hidden px-3 py-1 bg-cyber-red/20 border border-cyber-red/50 rounded text-cyber-red animate-pulse">🔴 修复进行中</span>
         </div>
         <div class="flex gap-6">
@@ -83,7 +83,7 @@
             <div class="lg:col-span-2">
                 <div class="bg-cyber-darker border border-cyber-blue/30 rounded-lg overflow-hidden h-[600px] flex flex-col">
                     <div class="px-4 py-3 border-b border-cyber-blue/30 flex items-center justify-between">
-                        <h2 class="text-lg font-semibold text-cyber-blue text-shadow-glow">🤖 Agent 思维流 (CoT)</h2>
+                        <h2 class="text-lg font-semibold text-cyber-blue text-shadow-glow">🤖 修复流程日志</h2>
                         <button onclick="clearLogs()" class="text-xs px-2 py-1 border border-gray-600 rounded hover:bg-gray-800">清空日志</button>
                     </div>
                     <div id="cotLogs" class="flex-1 p-4 overflow-y-auto scrollbar-hidden space-y-2 font-mono text-sm">
@@ -96,7 +96,7 @@
             <div class="space-y-6">
                 <!-- 红队控制区 -->
                 <div class="bg-cyber-darker border border-cyber-red/30 rounded-lg p-4">
-                    <h2 class="text-lg font-semibold text-cyber-red mb-4 text-shadow-glow">🔴 红队攻击区</h2>
+                    <h2 class="text-lg font-semibold text-cyber-red mb-4 text-shadow-glow">🧪 故障测试区</h2>
                     <div class="space-y-3">
                         <button id="btnLevel1" onclick="injectBug(1)" class="w-full py-3 bg-gradient-to-r from-cyber-red/80 to-red-600/80 hover:from-cyber-red hover:to-red-600 rounded-lg font-bold border border-cyber-red/50 border-glow transition-all">
                             Level 1 <br><span class="text-xs">语法错误注入</span>
@@ -107,18 +107,31 @@
                         <button id="btnLevel3" onclick="injectBug(3)" class="w-full py-3 bg-gradient-to-r from-purple-600/80 to-cyber-red/80 hover:from-purple-600 hover:to-cyber-red rounded-lg font-bold border border-purple-500/50 border-glow transition-all">
                             Level 3 <br><span class="text-xs">性能阻塞注入</span>
                         </button>
-                        <button id="btnRepair" onclick="startRepair()" class="w-full py-3 bg-gradient-to-r from-cyber-blue/80 to-cyber-purple/80 hover:from-cyber-blue hover:to-cyber-purple rounded-lg font-bold border border-cyber-blue/50 border-glow transition-all mt-4">
-                            🔵 启动蓝队修复
+                        <div class="border-t border-gray-700/50 my-2 pt-2">
+                            <button id="btnRestore" onclick="restoreFile()" class="w-full py-2 bg-gray-700/80 hover:bg-gray-700 rounded-lg font-bold border border-gray-600/50 transition-all text-sm">
+                                🛟 一键恢复原始文件
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 蓝队控制区 -->
+                <div class="bg-cyber-darker border border-cyber-blue/30 rounded-lg p-4">
+                    <h2 class="text-lg font-semibold text-cyber-blue mb-4 text-shadow-glow">🔧 修复控制区</h2>
+                    <div class="space-y-3">
+                        <button id="btnRepair" onclick="startRepair()" class="w-full py-4 bg-gradient-to-r from-cyber-blue/80 to-cyber-purple/80 hover:from-cyber-blue hover:to-cyber-purple rounded-lg font-bold border border-cyber-blue/50 border-glow transition-all text-lg">
+                            🚀 启动自动修复
                         </button>
                     </div>
                 </div>
 
                 <!-- 知识库概览 -->
-                <div class="bg-cyber-darker border border-cyber-green/30 rounded-lg p-4">
+                <div class="bg-cyber-darker border border-cyber-green/30 rounded-lg p-4 cursor-pointer hover:border-cyber-green/60 transition-all" onclick="showKnowledgeBase()">
                     <h2 class="text-lg font-semibold text-cyber-green mb-3 text-shadow-glow">📚 知识库概览</h2>
                     <div class="text-center py-4">
                         <div id="knowledgeCount" class="text-5xl font-bold text-cyber-green animate-glow">0</div>
                         <div class="text-sm text-gray-400 mt-2">条已收录修复经验</div>
+                        <div class="text-xs text-cyber-green/70 mt-2">点击查看详情</div>
                     </div>
                 </div>
             </div>
@@ -144,6 +157,18 @@
             </div>
         </div>
     </main>
+
+    <!-- 知识库弹窗 -->
+    <div id="knowledgeModal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-cyber-darker border border-cyber-green/30 rounded-lg w-full max-w-4xl max-h-[80vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-cyber-green/30 flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-cyber-green text-shadow-glow">📚 故障知识库详情</h2>
+                <button onclick="closeKnowledgeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="knowledgeContent" class="flex-1 p-6 overflow-y-auto scrollbar-hidden space-y-4">
+            </div>
+        </div>
+    </div>
 
     <script>
         let ws;
@@ -253,6 +278,26 @@
             }
         }
 
+        // 恢复原始文件
+        async function restoreFile() {
+            if (isRepairing) return;
+            const btn = document.getElementById('btnRestore');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '恢复中...';
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/red/restore`, { method: 'POST' });
+                const result = await response.json();
+                alert(result.message);
+            } catch (e) {
+                alert('恢复失败: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         // 启动修复
         async function startRepair() {
             if (isRepairing) return;
@@ -282,6 +327,43 @@
             } catch (e) {
                 alert('合并失败: ' + e.message);
             }
+        }
+
+        // 显示知识库详情
+        async function showKnowledgeBase() {
+            try {
+                const response = await fetch(`${baseUrl}/api/knowledge-base`);
+                const result = await response.json();
+                const content = document.getElementById('knowledgeContent');
+                content.innerHTML = '';
+                
+                result.data.forEach((item, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-cyber-dark/80 border border-cyber-green/20 rounded-lg p-4 hover:border-cyber-green/40 transition-all';
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <div class="flex-1">
+                                <div class="text-cyber-green font-bold">${index + 1}. ${item.error_type}</div>
+                                <div class="text-xs text-gray-400 mt-1">置信度: ${(item.confidence * 100).toFixed(0)}%</div>
+                            </div>
+                            <span class="px-2 py-1 bg-cyber-green/10 text-cyber-green text-xs rounded">匹配模式: ${item.error_pattern}</span>
+                        </div>
+                        <div class="text-sm text-gray-300 mt-2">
+                            <strong>解决方案:</strong> ${item.solution}
+                        </div>
+                    `;
+                    content.appendChild(card);
+                });
+                
+                document.getElementById('knowledgeModal').classList.remove('hidden');
+            } catch (e) {
+                alert('加载知识库失败: ' + e.message);
+            }
+        }
+
+        // 关闭知识库弹窗
+        function closeKnowledgeModal() {
+            document.getElementById('knowledgeModal').classList.add('hidden');
         }
 
         // 检查服务状态
